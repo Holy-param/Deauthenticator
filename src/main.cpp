@@ -5,7 +5,6 @@
 #define MAX_DEVICES 50
 #define MAX_NETWORKS 20
 
-// ========================= STRUCT =========================
 
 struct network {
   String ssid;
@@ -14,7 +13,6 @@ struct network {
   int channel;
 };
 
-// ========================= GLOBALS =========================
 
 network scannedNetworks[MAX_NETWORKS];
 int scannedCount = 0;
@@ -27,7 +25,6 @@ volatile uint8_t deviceCount = 0;
 uint8_t selectedClient[6];
 bool clientSelected = false;
 
-// ========================= SCAN =========================
 
 void scanNetworks() {
   Serial.println("\nScanning...");
@@ -60,16 +57,11 @@ void scanNetworks() {
            &scannedNetworks[i].bssidArr[5]);
 
     Serial.printf("| %-3d | %-25s | %-17s | %-3d |\n",
-                  i + 1,
-                  scannedNetworks[i].ssid.c_str(),
-                  scannedNetworks[i].bssid.c_str(),
-                  scannedNetworks[i].channel);
+                  i + 1,scannedNetworks[i].ssid.c_str(),scannedNetworks[i].bssid.c_str(),scannedNetworks[i].channel);
   }
 
   Serial.println("--------------------------------------------------");
 }
-
-// ========================= SNIFFER CALLBACK =========================
 
 void snifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
@@ -82,47 +74,42 @@ void snifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     uint8_t addr2[6];
     uint8_t addr3[6];
 
-    memcpy(addr1, payload + 4, 6);   // Destination
-    memcpy(addr2, payload + 10, 6);  // Source
-    memcpy(addr3, payload + 16, 6);  // BSSID (usually)
+    memcpy(addr1, payload + 4, 6);    
+    memcpy(addr2, payload + 10, 6);  
+    memcpy(addr3, payload + 16, 6);  
 
-    // Check if this packet belongs to selected AP
     bool belongsToAP =
         (memcmp(addr1, selectedNetwork.bssidArr, 6) == 0) ||
         (memcmp(addr2, selectedNetwork.bssidArr, 6) == 0) ||
         (memcmp(addr3, selectedNetwork.bssidArr, 6) == 0);
 
     if (!belongsToAP) return;
-
-    // Determine client MAC
-    uint8_t* clientMac = nullptr;
-
+     uint8_t* clientMac = nullptr;
     if (memcmp(addr1, selectedNetwork.bssidArr, 6) == 0)
-        clientMac = addr2;  // Client → AP
+        clientMac = addr2;
     else if (memcmp(addr2, selectedNetwork.bssidArr, 6) == 0)
-        clientMac = addr1;  // AP → Client
+        clientMac = addr1;  
     else if (memcmp(addr3, selectedNetwork.bssidArr, 6) == 0)
-        clientMac = addr2;  // Common infrastructure case
+        clientMac = addr2;  
 
-    // Ignore broadcast2
+  
 if (clientMac == nullptr) return;
 
 if (clientMac[0] == 0xFF)
     return;
 
-// Ignore multicast (LSB of first byte = 1)
 if (clientMac[0] & 0x01)
     return;
 
-// Ignore AP MAC itself
+
 if (memcmp(clientMac, selectedNetwork.bssidArr, 6) == 0)
     return;
 
 
-    // Ignore broadcast address
+    
     if (clientMac[0] == 0xFF) return;
 
-    // Check if device already exists
+    
     for (int i = 0; i < deviceCount; i++) {
         if (memcmp(receivers[i], clientMac, 6) == 0) {
             packetCount[i]++;
@@ -130,7 +117,7 @@ if (memcmp(clientMac, selectedNetwork.bssidArr, 6) == 0)
         }
     }
 
-    // Add new device
+    
     if (deviceCount < MAX_DEVICES) {
         memcpy(receivers[deviceCount], clientMac, 6);
         packetCount[deviceCount] = 1;
@@ -139,7 +126,6 @@ if (memcmp(clientMac, selectedNetwork.bssidArr, 6) == 0)
 }
 
 
-// ========================= LIST DEVICES =========================
 
 void listDevices() {
 
@@ -179,7 +165,7 @@ void listDevices() {
 
   Serial.println("-------------------------\n");
 }
-// ========================= Monitor Device =========================
+
 void selectDevice() {
 
   if (deviceCount == 0) {
@@ -233,7 +219,6 @@ void startLiveMonitor() {
     memcpy(addr1, payload + 4, 6);
     memcpy(addr2, payload + 10, 6);
 
-    // Check if packet involves selected client
     if (memcmp(addr1, selectedClient, 6) == 0 ||
         memcmp(addr2, selectedClient, 6) == 0) {
 
@@ -260,7 +245,6 @@ void startLiveMonitor() {
   esp_wifi_set_promiscuous(false);
   Serial.println("Stopped monitoring.");
 }
-// ========================= SETUP =========================
 
 void setup() {
   Serial.begin(115200);
@@ -302,7 +286,7 @@ void sendDeauthPacket()
    esp_wifi_80211_tx(WIFI_IF_STA, (uint8_t*)&deauth_frame, sizeof(deauth_frame), true);
 }
 
-// ========================= LOOP =========================
+
 void monitorMenu() {
 
   if (!clientSelected) {
